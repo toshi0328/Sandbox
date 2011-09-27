@@ -1,0 +1,9 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+
+one:
+  todo: MyString
+  deadline: 2011-09-27
+
+two:
+  todo: MyString
+  deadline: 2011-09-27
