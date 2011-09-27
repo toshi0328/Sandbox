@@ -23,6 +23,8 @@ var gBall = null;
 var gBorders = null;
 var gBlocks = null;
 
+var gBallCount = 3;
+
 var gGameProgress  = 0; // 0:preparing, 1:befor game 2:game play, 3:game over, 4 :game clear
 var gGameLoopCount = 0 ;
 
@@ -39,6 +41,10 @@ function mainLoop()
     }else if( gGameProgress == 2 ){
 	updateGameStatus();
 	draw_canvas_in_gameprogress();    
+    }else if( gGameProgress == 3 ){
+	draw_canvas_starting();
+    }else if( gGameProgress == 4 ){
+	// draw_canvas_next_stage
     }
     gGameLoopCount++;
 }
@@ -55,8 +61,29 @@ function updateGameStatus()
 
     var allBlockAry = gBorders.concat( [gPaddle] );
     allBlockAry = allBlockAry.concat( gBlocks );
-
     gBall.move(allBlockAry);
+
+    if( gBall.isOutOfStage()){
+	gBallCount--;
+	initPaddleAndBall();	
+    }
+    if( gBallCount < 0){
+	// game over!
+	gGameProgress = 3;
+	return;
+    }
+
+    // gameClear?
+    var allBlockIsBroken = true;
+    for( var i = 0 ; i < gBlocks.length ; i++){
+	if( !gBlocks[i].isBroken() ){
+	    allBlockIsBroken = false;
+	    break;
+	}
+    }
+    if(allBlockIsBroken == true){
+	gGameProgress = 4;
+    }
 }
 
 function getKeyCode(event)
@@ -68,7 +95,7 @@ function getKeyCode(event)
 function onKeyDown(nsEvent)
 {
     var keyCode = getKeyCode(nsEvent);
-    if(gGameProgress == 1){
+    if(gGameProgress == 1 || gGameProgress == 3){// game starting or after gameover
 	if(keyCode == 32){ //space
 	    newGame();
 	}
@@ -141,6 +168,10 @@ var Block = function(init_x, init_y, init_width, init_height, init_strength){
 	    this.strength -= 1;
 	}
     }
+    this.isBroken = function(){
+	if( this.strength == 0 ) return true;
+	return false ;
+    }
 }
 
 var Ball = function(init_x_center, init_y_center){
@@ -148,6 +179,7 @@ var Ball = function(init_x_center, init_y_center){
     this.center = new Point(init_x_center, init_y_center) ; 
     this.x_velocity = 0;
     this.y_velocity = 0;
+    this.initVelocityLength = 4;
 
     this.isStopped = function(){
 	if( this.x_velocity == 0 && this.y_velocity == 0 ){
@@ -156,9 +188,9 @@ var Ball = function(init_x_center, init_y_center){
 	return false;
     }
     this.start = function(){
-	var initVelocityLength = 2;
-	this.x_velocity = -initVelocityLength*Math.sin(Math.PI/4.0);
-	this.y_velocity = -initVelocityLength*Math.cos(Math.PI/4.0);
+	var initAngle = (Math.random() - 0.5)*2.0 * (Math.PI/3.0)
+	this.x_velocity = -this.initVelocityLength*Math.sin(initAngle);
+	this.y_velocity = -this.initVelocityLength*Math.cos(initAngle);
     }
     this.draw = function(context){
 	context.fillStyle = kBallColor;
@@ -195,6 +227,12 @@ var Ball = function(init_x_center, init_y_center){
 	this.center.x += this.x_velocity;
 	this.center.y += this.y_velocity;
     }
+    this.isOutOfStage = function(){
+	if( this.center.y > kStageHeight ){
+	    return true;
+	}
+	return false;
+    }
 }
 
 // drawing
@@ -214,16 +252,14 @@ var gShowText = true;
 function draw_canvas_starting(){
     clear_canvas();
     draw_background();
-    /*
     if(gGameLoopCount%60 == 0){
 	gShowText = !gShowText;
     }
-    */
     if(gShowText){
-	gCanvasContext.font = "bold 12px sans-serif";
-	//	gCanvasContext.textAlign = "center";	
-	//	gCanvasContext.fillText("Press Space-Key to start game", kStageWidth*0.5, kStageHeight*0.5);
-	gCanvasContext.fillText("Press Space-Key to start game", 50, 50);
+	gCanvasContext.font = "15px sans-serif";
+	gCanvasContext.textAlign = "center";	
+	gCanvasContext.fillStyle="black";	
+	gCanvasContext.fillText("Press Space-Key to start game", kStageWidth*0.5, kStageHeight*0.5);
     }
 }
 
@@ -240,16 +276,19 @@ function draw_canvas_in_gameprogress(){
     gBall.draw(gCanvasContext);
 }
 
+
 // initializing
-function newGame(){
-    gGameProgress = 0 ;
-    
+function initPaddleAndBall(){
     init_x = (kStageWidth * 0.5 - kPaddleWidth*0.5);
     init_y = (kStageHeight - 2 * kPaddleHeight);
     gPaddle = new Block(init_x, init_y, kPaddleWidth, kPaddleHeight, -2);
 
     gBall = new Ball(kStageWidth *0.5, gPaddle.rect.y - 8);
+}
 
+function newGame(){
+    gGameProgress = 0 ;
+    
     gBorders = new Array();
     gBorders[0] = new Block(0, 0, kStageWidth, kStageBorderWidth, -1);
     gBorders[1] = new Block(0, 0, kStageBorderWidth, kStageHeight, -1);
@@ -277,6 +316,9 @@ function newGame(){
 	}
     }
     
+    gBallCount = 3;
+    initPaddleAndBall();
+
     gGameProgress = 2;
     gGameLoopCount = 0;
 }
@@ -298,3 +340,5 @@ function initGame()
 
     gGameProgress = 1;
  }
+
+
