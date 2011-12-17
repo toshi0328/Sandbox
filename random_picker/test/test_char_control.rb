@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'bin'))
 
@@ -9,6 +10,12 @@ MiniTest::Unit.autorun
 class CharControlTestCase < MiniTest::Unit::TestCase
   def setup
     @char_control = CharControl.new()
+  end
+
+  def teardown
+    if(File.exists?(CharControl.get_selected_list_file_name_fullpath))
+      File.delete(CharControl.get_selected_list_file_name_fullpath)
+    end
   end
 
   def test_selected_char_list
@@ -66,4 +73,50 @@ class CharControlTestCase < MiniTest::Unit::TestCase
     assert_equal(get_char.sort, @char_control.char_list.sort)
   end
 
+  def test_get_next_char_for_star
+    @char_control.star_get_position.times do |i|
+      char = @char_control.get_next_char
+      return if(char == '☆')
+    end
+    char = @char_control.get_next_char
+    assert_equal('☆', char)
+  end
+
+  def test_get_file_name_fullpath
+#    p CharControl.get_selected_list_file_name_fullpath
+  end
+
+  def test_clear_save_load
+
+    @char_control.selected_list.push(1)
+    @char_control.selected_list.push(4)
+    @char_control.selected_list.push(7)
+    assert_equal( 3, @char_control.selected_list.size )
+    @char_control.save_to_file
+    assert(File.exists?(CharControl.get_selected_list_file_name_fullpath))
+    @char_control.clear_file
+    assert_equal( 0, @char_control.selected_list.size )
+    assert(!File.exists?(CharControl.get_selected_list_file_name_fullpath))
+
+    @char_control.selected_list.push(1)
+    @char_control.selected_list.push(6)
+    @char_control.selected_list.push(22)
+    assert_equal( 3, @char_control.selected_list.size )
+    @char_control.save_to_file
+    assert(File.exists?(CharControl.get_selected_list_file_name_fullpath))
+
+    @char_control.selected_list = []
+    assert_equal( 0, @char_control.selected_list.size )
+
+    @char_control.load_from_file
+    assert_equal( 3, @char_control.selected_list.size )
+    assert_equal( 1, @char_control.selected_list[0] )
+    assert_equal( 6, @char_control.selected_list[1] )
+    assert_equal( 22, @char_control.selected_list[2] )
+
+    @char_control.clear_file
+    assert_equal( 0, @char_control.selected_list.size )
+    assert(!File.exists?(CharControl.get_selected_list_file_name_fullpath))
+
+  end
 end

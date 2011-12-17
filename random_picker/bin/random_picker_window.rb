@@ -16,6 +16,9 @@ class RandomPickerWindow < Qt::MainWindow
   def initialize(parent = nil)
     super
 
+    @cell_size = 80
+    @default_column_count = 5
+
     @char_control = CharControl.new()
 
     setWindowTitle("〜次の文字は、何かな〜")
@@ -37,57 +40,22 @@ class RandomPickerWindow < Qt::MainWindow
     connect(@start_button, SIGNAL('clicked()'), self, SLOT('start()'))
     connect(@stop_button, SIGNAL('clicked()'), self, SLOT('stop()'))
 
-    @main_charactor_view = TextPaintWidget.new()
-
-    default_column_count = 5
+    @main_charactor_view = TextPaintWidget.new(@char_control)
 
     @list_charactor_slider = Qt::Slider.new(Qt::Horizontal)
     @list_charactor_slider.setMinimum(3)
     @list_charactor_slider.setMaximum(10)
-    @list_charactor_slider.setSliderPosition(default_column_count)
+    @list_charactor_slider.setSliderPosition(@default_column_count)
     @list_charactor_slider.setTickInterval(1)
     @list_charactor_slider.setTickPosition(2)
     connect(@list_charactor_slider, SIGNAL('valueChanged(int)'), self, SLOT('slider_value_changed(int)'))
 
     # 継承した方がすっきりするか？
     @list_charactor_view = Qt::TableWidget.new()
-    update_list_char(default_column_count)
+    update_list_char(@default_column_count)
   end
 
-  def update_list_char(column_count)
-    @list_charactor_view.clearContents
-    selected_char = @char_control.selected_char_list
-    row_count = [1, (selected_char.size - 1)/column_count + 1].max
-
-    cell_size = 50
-    @list_charactor_view.setColumnCount(column_count)
-    column_count.times do |i|
-      @list_charactor_view.setColumnWidth(i, cell_size)
-    end
-
-    @list_charactor_view.setRowCount(row_count)
-    row_count.times do |i|
-      @list_charactor_view.setRowHeight(i, cell_size)
-    end
-
-    selected_char_idx = 0
-    font = Qt::Font.new()
-    font.setPixelSize( cell_size - 6 )
-    row_count.times do |row_idx|
-      column_count.times do |column_idx|
-        char = selected_char[selected_char_idx]
-        break if char.nil?
-        item = Qt::TableWidgetItem.new
-        item.setText(char)
-        item.setTextAlignment(Qt::AlignCenter)
-        item.setFont(font)
-        @list_charactor_view.setItem(row_idx, column_idx, item)
-        selected_char_idx += 1
-      end
-    end
-  end
-
-  def setLayout()
+  def setLayout
     left_button_layout = Qt::HBoxLayout.new do |n|
       n.addWidget(@start_button)
       n.addWidget(@stop_button)
@@ -110,6 +78,40 @@ class RandomPickerWindow < Qt::MainWindow
     splitter.addWidget(left_widget)
     splitter.addWidget(right_widget)
     setCentralWidget(splitter)
+  end
+
+  def update_list_char(column_count = nil)
+    column_count = @list_charactor_slider.value if(column_count.nil?)
+
+    @list_charactor_view.clearContents
+    selected_char = @char_control.selected_char_list
+    row_count = [1, (selected_char.size - 1)/column_count + 1].max
+
+    @list_charactor_view.setColumnCount(column_count)
+    column_count.times do |i|
+      @list_charactor_view.setColumnWidth(i, @cell_size)
+    end
+
+    @list_charactor_view.setRowCount(row_count)
+    row_count.times do |i|
+      @list_charactor_view.setRowHeight(i, @cell_size)
+    end
+
+    selected_char_idx = 0
+    font = Qt::Font.new()
+    font.setPixelSize( @cell_size - 6 )
+    row_count.times do |row_idx|
+      column_count.times do |column_idx|
+        char = selected_char[selected_char_idx]
+        break if char.nil?
+        item = Qt::TableWidgetItem.new
+        item.setText(char)
+        item.setTextAlignment(Qt::AlignCenter)
+        item.setFont(font)
+        @list_charactor_view.setItem(row_idx, column_idx, item)
+        selected_char_idx += 1
+      end
+    end
   end
 
   def createActions()
@@ -136,7 +138,8 @@ class RandomPickerWindow < Qt::MainWindow
   end
 
   def clear()
-    # 設定ファイルを消す
+    @char_control.clear_file
+    update_list_char()
   end
 
   def start()
@@ -147,8 +150,8 @@ class RandomPickerWindow < Qt::MainWindow
   def stop()
     # 新しい文字を取り出し、ビューを更新する
     @main_charactor_view.showing_char = @char_control.get_next_char
-    column_count = @list_charactor_slider.value
-    update_list_char(column_count)
+    update_list_char()
+    @char_control.save_to_file
   end
 
   def slider_value_changed(slider_value)
